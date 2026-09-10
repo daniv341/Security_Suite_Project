@@ -1,0 +1,50 @@
+# Override de desarrollo: agrega recarga automática (hot-reload) sobre
+# docker-compose.yml, sin tocar la configuración de producción.
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Qué hace distinto de docker-compose.yml:
+#   1. Compila hasta el stage "dev" del Dockerfile (Rust + cargo-watch),
+#      en vez del binario optimizado de producción.
+#   2. Monta el código fuente como bind mount (".:/app"), así que
+#      cada cambio en tu editor se refleja al instante dentro del
+#      contenedor, sin reconstruir la imagen.
+#   3. Cachea `target/` y el registro de Cargo en volúmenes nombrados
+#      (persisten entre reinicios). Esto es LO QUE EVITA el problema
+#      de rendimiento: sin esta cache, cada guardado dispararía una
+#      recompilación completa de todas las dependencias (varios
+#      minutos); con ella, `cargo-watch` hace una recompilación
+#      incremental de solo tu código (unos pocos segundos).
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    volumes:
+      - .:/app
+      - cargo_registry_cache:/usr/local/cargo/registry
+      - target_cache:/app/target
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-security_user}:${POSTGRES_PASSWORD:-security_pass}@db:5432/${POSTGRES_DB:-security_suite}
+      SERVER_ADDR: 0.0.0.0:8080
+      RUST_LOG: info
+      # Evita que cargo-watch entre en loop por los propios artefactos
+      # de compilación o por archivos de Docker/Git.
+      CARGO_WATCH_IGNORE: "target,.git,migrations"
+    command:
+      [
+        "cargo",
+        "watch",
+        "--poll",
+        "--why",
+        "--ignore",
+        "target/*",
+        "-x",
+        "run",
+      ]
+
+volumes:
+  cargo_registry_cache:
+  target_cache:

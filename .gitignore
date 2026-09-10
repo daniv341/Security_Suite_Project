@@ -1,0 +1,93 @@
+# =========================
+
+# Rust / Cargo
+
+# =========================
+
+# Build artifacts
+
+target/
+
+# Rust Analyzer
+
+.rust-analyzer/
+
+# =========================
+
+# Environment / Secrets
+
+# =========================
+
+.env
+.env.local
+.env.*.local
+scaffold_object.py
+
+# Mantener el ejemplo
+
+!.env.example
+
+# =========================
+
+# IDE / Editors
+
+# =========================
+
+.vscode/
+.idea/
+
+# Visual Studio
+
+.vs/
+
+# =========================
+
+# OS
+
+# =========================
+
+# Windows
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+
+# Logs
+
+# =========================
+
+*.log
+logs/
+
+# =========================
+
+# Docker
+
+# =========================
+
+# Docker override files locales
+
+docker-compose.override.yml
+
+# =========================
+
+# Coverage / Testing
+
+# =========================
+
+coverage/
+*.profraw
+*.profdata
+
+# =========================
+
+# Temporary files
+
+# =========================
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
