@@ -15,6 +15,7 @@ use axum::Json;
 use uuid::Uuid;
 
 use crate::users::domain::UserServicePort;
+use crate::folders::domain::FolderServicePort;
 
 use super::dto::{
     CreateUserRequest, PaginatedUsersResponse, PaginationQuery, UpdateUserRequest, UserResponse,
@@ -25,15 +26,12 @@ use crate::shared::auth::JwtService;
 use super::auth::AuthenticatedUser;
 use super::error_response::{map_domain_error, HandlerError};
 
-/// Tipo compartido inyectado como estado de Axum. Al depender del
-/// trait (`dyn UserServicePort`) y no de `UserService` concreto, los
-/// handlers permanecen desacoplados de la implementación de la
-/// capa de aplicación.
 use crate::users::application::login_service::LoginService;
 
 pub struct AppState {
     pub user_service: Arc<dyn UserServicePort>,
     pub login_service: Arc<LoginService>,
+    pub folder_service: Arc<dyn FolderServicePort>,
     pub jwt_service: Arc<JwtService>,
 }
 

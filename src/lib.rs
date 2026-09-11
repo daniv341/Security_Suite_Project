@@ -13,3 +13,4 @@
 
 pub mod shared;
 pub mod users;
+pub mod folders;

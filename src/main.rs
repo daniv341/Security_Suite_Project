@@ -2,15 +2,20 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use sqlx::postgres::PgPoolOptions;
+use security_suite::users::infrastructure::http::handlers::AppState;
 
 use security_suite::shared::auth::JwtService;
 
 use security_suite::users::application::login_service::LoginService;
 use security_suite::users::application::service::UserService;
 use security_suite::users::domain::UserServicePort;
-use security_suite::users::infrastructure::http::handlers::AppState;
 use security_suite::users::infrastructure::http::routes::user_routes;
 use security_suite::users::infrastructure::postgres_repository::PostgresUserRepository;
+
+use security_suite::folders::application::service::FolderService;
+use security_suite::folders::domain::FolderServicePort;
+use security_suite::folders::infrastructure::http::routes::folders_routes;
+use security_suite::folders::infrastructure::postgres_repository::PostgresFolderRepository;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,12 +46,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("No se pudieron ejecutar las migraciones de la base de datos");
 
-    // Repositorio PostgreSQL
-    let repository = Arc::new(PostgresUserRepository::new(pool));
+    // Repositorios PostgreSQL
+    let user_repository = Arc::new(PostgresUserRepository::new(pool.clone()));
+    let folder_repository = Arc::new(PostgresFolderRepository::new(pool.clone()));
 
     // Servicio de usuarios
     let user_service: Arc<dyn UserServicePort> =
-        Arc::new(UserService::new(repository.clone()));
+        Arc::new(UserService::new(user_repository.clone()));
+
+    let folder_service: Arc<dyn FolderServicePort> = Arc::new(FolderService::new(folder_repository.clone()));
 
     // Servicio JWT
     let jwt_service = Arc::new(JwtService::new(
@@ -56,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Servicio de login
     let login_service = Arc::new(LoginService::new(
-        repository.clone(),
+        user_repository.clone(),
         jwt_service.clone(),
     ));
 
@@ -64,10 +72,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(AppState {
         user_service,
         login_service,
+        folder_service,
         jwt_service,
     });
 
-    let app = user_routes(state);
+    let app = user_routes(state.clone()).merge(folders_routes(state));
 
     let server_addr =
         std::env::var("SERVER_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());

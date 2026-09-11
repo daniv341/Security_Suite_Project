@@ -22,6 +22,7 @@ target/
 .env.local
 .env.*.local
 scaffold_object.py
+GUIA_DESAROLLO.md
 
 # Mantener el ejemplo
 
