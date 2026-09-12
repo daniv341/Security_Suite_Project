@@ -2,20 +2,22 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use sqlx::postgres::PgPoolOptions;
-use security_suite::users::infrastructure::http::handlers::AppState;
+use security_suite::shared::state::{AppState, UserState, FolderState, LoginState};
 
 use security_suite::shared::auth::JwtService;
 
 use security_suite::users::application::login_service::LoginService;
 use security_suite::users::application::service::UserService;
 use security_suite::users::domain::UserServicePort;
-use security_suite::users::infrastructure::http::routes::user_routes;
+use security_suite::users::infrastructure::http::routes::{user_routes, login_routes};
 use security_suite::users::infrastructure::postgres_repository::PostgresUserRepository;
 
 use security_suite::folders::application::service::FolderService;
 use security_suite::folders::domain::FolderServicePort;
 use security_suite::folders::infrastructure::http::routes::folders_routes;
 use security_suite::folders::infrastructure::postgres_repository::PostgresFolderRepository;
+
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -69,14 +71,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     // Estado compartido de la aplicación
-    let state = Arc::new(AppState {
+    let user_state = Arc::new(UserState {
         user_service,
-        login_service,
+    });
+
+    let folder_state = Arc::new(FolderState {
         folder_service,
+    });
+
+    let login_state = Arc::new(LoginState {
+        login_service,
         jwt_service,
     });
 
-    let app = user_routes(state.clone()).merge(folders_routes(state));
+    let app_state = AppState {
+        user_state,
+        login_state,
+        folder_state,
+    };
+
+    let app = user_routes()
+        .merge(login_routes())
+        .merge(folders_routes())
+        .with_state(app_state);
 
     let server_addr =
         std::env::var("SERVER_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());

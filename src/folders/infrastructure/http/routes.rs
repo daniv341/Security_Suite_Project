@@ -9,13 +9,10 @@ use axum::Router;
 use tower_http::trace::TraceLayer;
 use tracing::Span;
 
-use std::sync::Arc;
-
-use crate::users::infrastructure::http::handlers::AppState;
-
+use crate::shared::state::AppState;
 use super::handlers;
 
-pub fn folders_routes(state: Arc<AppState>) -> Router {
+pub fn folders_routes() -> Router<AppState> {
     // Log de request resumido: una sola línea por petición (método,
     // path, status, latencia), igual que en `users`.
     let trace_layer = TraceLayer::new_for_http()
@@ -36,7 +33,7 @@ pub fn folders_routes(state: Arc<AppState>) -> Router {
         });
 
     // configuración de rutas de Axum para /api/v1/folders
-    Router::new()
+    Router::<AppState>::new()
         .route("/api/v1/folders", post(handlers::create_folder))
         .route("/api/v1/folders/", get(handlers::get_all_folders))
         .route(
@@ -46,5 +43,4 @@ pub fn folders_routes(state: Arc<AppState>) -> Router {
                 .delete(handlers::delete_folder),
         )
         .layer(trace_layer)
-        .with_state(state)
 }

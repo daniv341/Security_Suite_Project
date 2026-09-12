@@ -14,30 +14,20 @@ use axum::http::StatusCode;
 use axum::Json;
 use uuid::Uuid;
 
-use crate::users::domain::UserServicePort;
-use crate::folders::domain::FolderServicePort;
 
 use super::dto::{
     CreateUserRequest, PaginatedUsersResponse, PaginationQuery, UpdateUserRequest, UserResponse,
 };
 use super::dto::{LoginRequest, LoginResponse};
 
-use crate::shared::auth::JwtService;
 use super::auth::AuthenticatedUser;
 use super::error_response::{map_domain_error, HandlerError};
 
-use crate::users::application::login_service::LoginService;
-
-pub struct AppState {
-    pub user_service: Arc<dyn UserServicePort>,
-    pub login_service: Arc<LoginService>,
-    pub folder_service: Arc<dyn FolderServicePort>,
-    pub jwt_service: Arc<JwtService>,
-}
+use crate::shared::state::{UserState, LoginState};
 
 /// `POST /api/v1/users` — Registra un nuevo usuario.
 pub async fn create_user(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<UserState>>,
     Json(payload): Json<CreateUserRequest>,
 ) -> Result<(StatusCode, Json<UserResponse>), HandlerError> {
     let user = state
@@ -51,7 +41,7 @@ pub async fn create_user(
 
 /// `GET /api/v1/users/:id` — Obtiene el perfil de un usuario por id.
 pub async fn get_user(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<UserState>>,
     Path(id): Path<Uuid>,
     _auth: AuthenticatedUser, // con esta linea el endpoint queda protegido y requiere JWT
 ) -> Result<Json<UserResponse>, HandlerError> {
@@ -61,7 +51,7 @@ pub async fn get_user(
 
 /// `GET /api/v1/users/?page=&page_size=` — Lista usuarios paginados.
 pub async fn get_all_users(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<UserState>>,
     Query(pagination): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedUsersResponse>, HandlerError> {
     let result = state
@@ -75,7 +65,7 @@ pub async fn get_all_users(
 
 /// `PUT /api/v1/users/:id` — Actualiza username y/o email.
 pub async fn update_user(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<UserState>>,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateUserRequest>,
 ) -> Result<Json<UserResponse>, HandlerError> {
@@ -90,7 +80,7 @@ pub async fn update_user(
 
 /// `DELETE /api/v1/users/:id` — Elimina la cuenta de un usuario.
 pub async fn delete_user(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<UserState>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, HandlerError> {
     state.user_service.delete_user(id).await.map_err(map_domain_error)?;
@@ -98,7 +88,7 @@ pub async fn delete_user(
 }
 
 pub async fn login(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<LoginState>>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, HandlerError> {
     let token = state

@@ -12,13 +12,13 @@ use super::dto::{
     CreateFolderRequest, PaginatedFoldersResponse, PaginationQuery, UpdateFolderRequest,
     FolderResponse,
 };
-use crate::users::infrastructure::http::handlers::AppState;
+use crate::shared::state::FolderState;
 use crate::users::infrastructure::http::auth::AuthenticatedUser;
 use super::error_response::{map_domain_error, HandlerError};
 
 
 pub async fn create_folder(
-    State(state): State<Arc<AppState>>, // state inyectado con Arc<dyn FolderServicePort>
+    State(state): State<Arc<FolderState>>, // state inyectado con Arc<dyn FolderServicePort>
     auth: AuthenticatedUser,
     Json(payload): Json<CreateFolderRequest>, // payload inyectado con Json<CreateFolderRequest>
 ) -> Result<(StatusCode, Json<FolderResponse>), HandlerError> {
@@ -31,7 +31,7 @@ pub async fn create_folder(
 }
 
 pub async fn get_folder(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<FolderState>>,
     Path(id): Path<Uuid>, // path inyectado con Path<Uuid>
     auth: AuthenticatedUser,
 ) -> Result<Json<FolderResponse>, HandlerError> {
@@ -41,7 +41,7 @@ pub async fn get_folder(
 }
 
 pub async fn get_all_folders(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<FolderState>>,
     Query(pagination): Query<PaginationQuery>,
     auth: AuthenticatedUser,
 ) -> Result<Json<PaginatedFoldersResponse>, HandlerError> {
@@ -55,7 +55,7 @@ pub async fn get_all_folders(
 
 
 pub async fn update_folder(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<FolderState>>,
     Path(id): Path<Uuid>,
     auth: AuthenticatedUser,
     Json(payload): Json<UpdateFolderRequest>,
@@ -69,7 +69,7 @@ pub async fn update_folder(
 }
 
 pub async fn delete_folder(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<FolderState>>,
     Path(id): Path<Uuid>,
     auth: AuthenticatedUser,
 ) -> Result<StatusCode, HandlerError> {

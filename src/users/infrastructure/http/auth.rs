@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use axum::{
     async_trait,
-    extract::FromRequestParts,
+    extract::{FromRef, FromRequestParts},
     http::{
         header::AUTHORIZATION,
         request::Parts,
@@ -11,20 +11,22 @@ use axum::{
     },
 };
 
-use crate::users::infrastructure::http::handlers::AppState;
+use crate::shared::state::{AppState, LoginState};
 
 pub struct AuthenticatedUser {
     pub user_id: Uuid,
 }
 
 #[async_trait]
-impl FromRequestParts<Arc<AppState>> for AuthenticatedUser {
+impl FromRequestParts<AppState> for AuthenticatedUser {
     type Rejection = (StatusCode, &'static str);
 
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &Arc<AppState>,
+        state: &AppState,
     ) -> Result<Self, Self::Rejection> {
+        let login_state = Arc::<LoginState>::from_ref(state);
+
         let auth_header = parts
             .headers
             .get(AUTHORIZATION)
@@ -49,7 +51,7 @@ impl FromRequestParts<Arc<AppState>> for AuthenticatedUser {
                 "Invalid Authorization scheme",
             ))?;
 
-        let claims = state
+        let claims = login_state
             .jwt_service
             .validate_token(token)
             .map_err(|_| {
@@ -68,7 +70,7 @@ impl FromRequestParts<Arc<AppState>> for AuthenticatedUser {
             })?;
 
         Ok(Self {
-            user_id
+            user_id,
         })
     }
 }

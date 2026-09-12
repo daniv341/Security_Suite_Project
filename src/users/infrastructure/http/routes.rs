@@ -9,11 +9,10 @@ use axum::Router;
 use tower_http::trace::TraceLayer;
 use tracing::Span;
 
-use std::sync::Arc;
+use crate::shared::state::AppState;
+use super::handlers;
 
-use super::handlers::{self, AppState};
-
-pub fn user_routes(state: Arc<AppState>) -> Router {
+pub fn user_routes() -> Router<AppState> {
     // Log de request resumido: una sola línea por petición con
     // método, path, status y latencia. Se desactiva el evento de
     // "started processing request" que trae `TraceLayer` por defecto
@@ -35,9 +34,8 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
             );
         });
 
-    Router::new()
+    Router::<AppState>::new()
         .route("/api/v1/users", post(handlers::create_user))
-        .route("/api/v1/users/login", post(handlers::login))
         .route("/api/v1/users/", get(handlers::get_all_users))
         .route(
             "/api/v1/users/:id",
@@ -46,5 +44,27 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
                 .delete(handlers::delete_user),
         )
         .layer(trace_layer)
-        .with_state(state)
+}
+
+pub fn login_routes() -> Router<AppState> {
+    let trace_layer = TraceLayer::new_for_http()
+        .make_span_with(|request: &Request<Body>| {
+            tracing::info_span!(
+                "http",
+                method = %request.method(),
+                path = %request.uri().path(),
+            )
+        })
+        .on_request(|_request: &Request<Body>, _span: &Span| {})
+        .on_response(|response: &Response<Body>, latency: Duration, _span: &Span| {
+            tracing::info!(
+                status = response.status().as_u16(),
+                latency_ms = latency.as_millis(),
+                "request"
+            );
+        });
+    
+    Router::<AppState>::new()
+        .route("/api/v1/users/login", post(handlers::login))
+        .layer(trace_layer)
 }

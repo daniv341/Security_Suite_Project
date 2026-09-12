@@ -1,6 +1,6 @@
+mod common;
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use common::{build_app, dispatch, json_request, empty_request};
 
 use async_trait::async_trait;
 use axum::body::Body;
@@ -11,122 +11,8 @@ use tower::Service;
 use uuid::Uuid;
 
 use security_suite::shared::pagination::Pagination;
-use security_suite::users::application::service::UserService;
 use security_suite::users::domain::{DomainError, User, UserRepository, UserServicePort};
 use security_suite::users::infrastructure::http::routes::user_routes;
-
-/// Mismo mock que en `tests/user_service_tests.rs`: repositorio en
-/// memoria, sin necesidad de PostgreSQL.
-struct MockUserRepository {
-    users: Mutex<HashMap<Uuid, User>>,
-}
-
-impl MockUserRepository {
-    fn new() -> Self {
-        Self {
-            users: Mutex::new(HashMap::new()),
-        }
-    }
-}
-
-#[async_trait]
-impl UserRepository for MockUserRepository {
-    async fn create(&self, user: &User) -> Result<User, DomainError> {
-        let mut users = self.users.lock().unwrap();
-        users.insert(user.id, user.clone());
-        Ok(user.clone())
-    }
-
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, DomainError> {
-        let users = self.users.lock().unwrap();
-        Ok(users.get(&id).cloned())
-    }
-
-    async fn find_by_email(&self, email: &str) -> Result<Option<User>, DomainError> {
-        let users = self.users.lock().unwrap();
-        Ok(users.values().find(|u| u.email == email).cloned())
-    }
-
-    async fn find_all(&self, pagination: Pagination) -> Result<Vec<User>, DomainError> {
-        let users = self.users.lock().unwrap();
-        let mut all: Vec<User> = users.values().cloned().collect();
-        all.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-
-        let start = pagination.offset() as usize;
-        if start >= all.len() {
-            return Ok(vec![]);
-        }
-        let end = (start + pagination.limit() as usize).min(all.len());
-        Ok(all[start..end].to_vec())
-    }
-
-    async fn count_all(&self) -> Result<i64, DomainError> {
-        let users = self.users.lock().unwrap();
-        Ok(users.len() as i64)
-    }
-
-    async fn update(&self, user: &User) -> Result<User, DomainError> {
-        let mut users = self.users.lock().unwrap();
-        users.insert(user.id, user.clone());
-        Ok(user.clone())
-    }
-
-    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
-        let mut users = self.users.lock().unwrap();
-        users.remove(&id).ok_or(DomainError::NotFound)?;
-        Ok(())
-    }
-}
-
-/// Arma un router nuevo (con su propio repositorio en memoria,
-/// aislado del resto de los tests) listo para recibir requests.
-fn build_app() -> Router {
-    let repository = Arc::new(MockUserRepository::new());
-    let service: Arc<dyn UserServicePort> = Arc::new(UserService::new(repository));
-    user_routes(service)
-}
-
-/// Equivalente casero a `tower::ServiceExt::oneshot`, sin necesitar el
-/// feature `"util"` de `tower`: espera a que el servicio esté listo
-/// (`poll_ready`) y después lo invoca (`call`), que es exactamente lo
-/// que hace `oneshot` por dentro.
-async fn dispatch(app: &mut Router, request: Request<Body>) -> (StatusCode, Value) {
-    std::future::poll_fn(|cx| Service::poll_ready(app, cx))
-        .await
-        .expect("el router siempre está listo");
-
-    let response = app.call(request).await.expect("Router::call es infalible");
-    let status = response.status();
-
-    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .expect("no se pudo leer el body de la respuesta");
-
-    let body = if bytes.is_empty() {
-        Value::Null
-    } else {
-        serde_json::from_slice(&bytes).expect("la respuesta no es JSON válido")
-    };
-
-    (status, body)
-}
-
-fn json_request(method: &str, uri: &str, body: Value) -> Request<Body> {
-    Request::builder()
-        .method(method)
-        .uri(uri)
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&body).unwrap()))
-        .unwrap()
-}
-
-fn empty_request(method: &str, uri: &str) -> Request<Body> {
-    Request::builder()
-        .method(method)
-        .uri(uri)
-        .body(Body::empty())
-        .unwrap()
-}
 
 #[tokio::test]
 async fn post_users_crea_el_usuario_y_no_expone_password_hash() {
