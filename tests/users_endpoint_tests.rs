@@ -2,24 +2,18 @@ mod common;
 
 use common::{build_app, dispatch, json_request, empty_request};
 
-use async_trait::async_trait;
-use axum::body::Body;
-use axum::http::{Request, StatusCode};
-use axum::Router;
-use serde_json::{json, Value};
-use tower::Service;
+use axum::http::StatusCode;
+use serde_json::json;
 use uuid::Uuid;
 
-use security_suite::shared::pagination::Pagination;
-use security_suite::users::domain::{DomainError, User, UserRepository, UserServicePort};
-use security_suite::users::infrastructure::http::routes::user_routes;
+
 
 #[tokio::test]
 async fn post_users_crea_el_usuario_y_no_expone_password_hash() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (status, body) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -42,10 +36,10 @@ async fn post_users_crea_el_usuario_y_no_expone_password_hash() {
 
 #[tokio::test]
 async fn post_users_falla_con_password_corta() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (status, body) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -60,10 +54,10 @@ async fn post_users_falla_con_password_corta() {
 
 #[tokio::test]
 async fn post_users_falla_con_email_invalido() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (status, _body) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -77,10 +71,10 @@ async fn post_users_falla_con_email_invalido() {
 
 #[tokio::test]
 async fn post_users_falla_con_username_corto() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (status, _body) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -94,10 +88,10 @@ async fn post_users_falla_con_username_corto() {
 
 #[tokio::test]
 async fn post_users_falla_con_email_duplicado() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (first_status, _) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -108,7 +102,7 @@ async fn post_users_falla_con_email_duplicado() {
     assert_eq!(first_status, StatusCode::CREATED);
 
     let (status, body) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -123,10 +117,10 @@ async fn post_users_falla_con_email_duplicado() {
 
 #[tokio::test]
 async fn get_user_devuelve_404_si_no_existe() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (status, _body) = dispatch(
-        &mut app,
+        &app,
         empty_request("GET", &format!("/api/v1/users/{}", Uuid::new_v4())),
     )
     .await;
@@ -136,10 +130,10 @@ async fn get_user_devuelve_404_si_no_existe() {
 
 #[tokio::test]
 async fn get_user_devuelve_el_usuario_creado() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (_, created) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -149,7 +143,7 @@ async fn get_user_devuelve_el_usuario_creado() {
     .await;
     let id = created["id"].as_str().unwrap();
 
-    let (status, body) = dispatch(&mut app, empty_request("GET", &format!("/api/v1/users/{id}"))).await;
+    let (status, body) = dispatch(&app, empty_request("GET", &format!("/api/v1/users/{id}"))).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["id"], id);
@@ -158,10 +152,10 @@ async fn get_user_devuelve_el_usuario_creado() {
 
 #[tokio::test]
 async fn put_user_actualiza_username_y_email() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (_, created) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -172,7 +166,7 @@ async fn put_user_actualiza_username_y_email() {
     let id = created["id"].as_str().unwrap();
 
     let (status, body) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "PUT",
             &format!("/api/v1/users/{id}"),
@@ -188,10 +182,10 @@ async fn put_user_actualiza_username_y_email() {
 
 #[tokio::test]
 async fn put_user_falla_con_email_duplicado() {
-    let mut app = build_app();
+    let app = build_app();
 
     dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -201,7 +195,7 @@ async fn put_user_falla_con_email_duplicado() {
     .await;
 
     let (_, jane) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -212,7 +206,7 @@ async fn put_user_falla_con_email_duplicado() {
     let jane_id = jane["id"].as_str().unwrap();
 
     let (status, _body) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "PUT",
             &format!("/api/v1/users/{jane_id}"),
@@ -226,10 +220,10 @@ async fn put_user_falla_con_email_duplicado() {
 
 #[tokio::test]
 async fn delete_user_elimina_la_cuenta() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (_, created) = dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -239,19 +233,19 @@ async fn delete_user_elimina_la_cuenta() {
     .await;
     let id = created["id"].as_str().unwrap();
 
-    let (delete_status, _) = dispatch(&mut app, empty_request("DELETE", &format!("/api/v1/users/{id}"))).await;
+    let (delete_status, _) = dispatch(&app, empty_request("DELETE", &format!("/api/v1/users/{id}"))).await;
     assert_eq!(delete_status, StatusCode::NO_CONTENT);
 
-    let (get_status, _) = dispatch(&mut app, empty_request("GET", &format!("/api/v1/users/{id}"))).await;
+    let (get_status, _) = dispatch(&app, empty_request("GET", &format!("/api/v1/users/{id}"))).await;
     assert_eq!(get_status, StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn delete_user_falla_si_no_existe() {
-    let mut app = build_app();
+    let app = build_app();
 
     let (status, _body) = dispatch(
-        &mut app,
+        &app,
         empty_request("DELETE", &format!("/api/v1/users/{}", Uuid::new_v4())),
     )
     .await;
@@ -261,11 +255,11 @@ async fn delete_user_falla_si_no_existe() {
 
 #[tokio::test]
 async fn get_users_pagina_los_resultados() {
-    let mut app = build_app();
+    let app = build_app();
 
     for i in 0..5 {
         dispatch(
-            &mut app,
+            &app,
             json_request(
                 "POST",
                 "/api/v1/users",
@@ -279,7 +273,7 @@ async fn get_users_pagina_los_resultados() {
         .await;
     }
 
-    let (status, body) = dispatch(&mut app, empty_request("GET", "/api/v1/users/?page=1&page_size=2")).await;
+    let (status, body) = dispatch(&app, empty_request("GET", "/api/v1/users/?page=1&page_size=2")).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["items"].as_array().unwrap().len(), 2);
@@ -291,10 +285,10 @@ async fn get_users_pagina_los_resultados() {
 
 #[tokio::test]
 async fn get_users_usa_valores_por_defecto_si_no_se_especifican() {
-    let mut app = build_app();
+    let app = build_app();
 
     dispatch(
-        &mut app,
+        &app,
         json_request(
             "POST",
             "/api/v1/users",
@@ -303,7 +297,7 @@ async fn get_users_usa_valores_por_defecto_si_no_se_especifican() {
     )
     .await;
 
-    let (status, body) = dispatch(&mut app, empty_request("GET", "/api/v1/users/")).await;
+    let (status, body) = dispatch(&app, empty_request("GET", "/api/v1/users/")).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["page"], 1);

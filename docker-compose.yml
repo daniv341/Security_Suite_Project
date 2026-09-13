@@ -36,6 +36,8 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-security_user}:${POSTGRES_PASSWORD:-security_pass}@db:5432/${POSTGRES_DB:-security_suite}
       SERVER_ADDR: 0.0.0.0:8080
       RUST_LOG: info
+      JWT_SECRET: ${JWT_SECRET:-default_secret}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-3600}
     ports:
       - "8080:8080"
     networks:

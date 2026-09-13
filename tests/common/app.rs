@@ -4,7 +4,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use axum::Router;
 use serde_json::Value;
-use tower::Service;
+use tower::ServiceExt;
 
 use security_suite::shared::auth::JwtService;
 use security_suite::shared::state::{AppState, FolderState, LoginState, UserState};
@@ -16,7 +16,7 @@ use security_suite::folders::domain::FolderServicePort;
 
 use super::mock::{MockFolderService, MockUserRepository};
 
-pub fn build_app() -> Router<AppState> {
+pub fn build_app() -> Router {
     let repository = Arc::new(MockUserRepository::new());
 
     let user_service: Arc<dyn UserServicePort> =
@@ -55,28 +55,19 @@ pub fn build_app() -> Router<AppState> {
 }
 
 pub async fn dispatch(
-    app: &mut Router<AppState>,
+    app: &Router,
     request: Request<Body>,
 ) -> (StatusCode, Value) {
-    std::future::poll_fn(|cx| {
-        Service::<Request<Body>>::poll_ready(app, cx)
-    })
-    .await
-    .expect("el router siempre está listo");
-
-    let response = app
-        .call(request)
+    let response = app.clone()
+        .oneshot(request)
         .await
-        .expect("Router::call es infalible");
+        .expect("el router no pudo procesar la request");
 
     let status = response.status();
 
-    let bytes = axum::body::to_bytes(
-        response.into_body(),
-        usize::MAX,
-    )
-    .await
-    .expect("no se pudo leer el body de la respuesta");
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("no se pudo leer el body de la respuesta");
 
     let body = if bytes.is_empty() {
         Value::Null

@@ -24,7 +24,7 @@ thiserror = "1"
 dotenvy = "0.15"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tower = "0.4"
+tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.5", features = ["trace"] }
 jsonwebtoken = "9"
 time = "0.3"

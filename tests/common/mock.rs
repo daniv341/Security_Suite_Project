@@ -4,9 +4,9 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use security_suite::folders::domain;
+use security_suite::folders::domain::{DomainError as FolderError, Folder, FolderServicePort};
 use security_suite::shared::pagination::{PaginatedResult, Pagination};
-use security_suite::users::domain;
+use security_suite::users::domain::{DomainError as UserError, User, UserRepository};
 
 pub struct MockUserRepository {
     users: Mutex<HashMap<Uuid, User>>,
@@ -22,23 +22,23 @@ impl MockUserRepository {
 
 #[async_trait]
 impl UserRepository for MockUserRepository {
-    async fn create(&self, user: &User) -> Result<User, DomainError> {
+    async fn create(&self, user: &User) -> Result<User, UserError> {
         let mut users = self.users.lock().unwrap();
         users.insert(user.id, user.clone());
         Ok(user.clone())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, DomainError> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, UserError> {
         let users = self.users.lock().unwrap();
         Ok(users.get(&id).cloned())
     }
 
-    async fn find_by_email(&self, email: &str) -> Result<Option<User>, DomainError> {
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>, UserError> {
         let users = self.users.lock().unwrap();
         Ok(users.values().find(|u| u.email == email).cloned())
     }
 
-    async fn find_all(&self, pagination: Pagination) -> Result<Vec<User>, DomainError> {
+    async fn find_all(&self, pagination: Pagination) -> Result<Vec<User>, UserError> {
         let users = self.users.lock().unwrap();
         let mut all: Vec<User> = users.values().cloned().collect();
         all.sort_by(|a, b| b.created_at.cmp(&a.created_at));
@@ -53,20 +53,20 @@ impl UserRepository for MockUserRepository {
         Ok(all[start..end].to_vec())
     }
 
-    async fn count_all(&self) -> Result<i64, DomainError> {
+    async fn count_all(&self) -> Result<i64, UserError> {
         let users = self.users.lock().unwrap();
         Ok(users.len() as i64)
     }
 
-    async fn update(&self, user: &User) -> Result<User, DomainError> {
+    async fn update(&self, user: &User) -> Result<User, UserError> {
         let mut users = self.users.lock().unwrap();
         users.insert(user.id, user.clone());
         Ok(user.clone())
     }
 
-    async fn delete(&self, id: Uuid) -> Result<(), DomainError> {
+    async fn delete(&self, id: Uuid) -> Result<(), UserError> {
         let mut users = self.users.lock().unwrap();
-        users.remove(&id).ok_or(DomainError::NotFound)?;
+        users.remove(&id).ok_or(UserError::NotFound)?;
         Ok(())
     }
 }
@@ -79,7 +79,7 @@ impl FolderServicePort for MockFolderService {
         &self,
         _user_id: Uuid,
         _name: String,
-    ) -> Result<Folder, DomainError> {
+    ) -> Result<Folder, FolderError> {
         unimplemented!()
     }
 
@@ -87,7 +87,7 @@ impl FolderServicePort for MockFolderService {
         &self,
         _user_id: Uuid,
         _id: Uuid,
-    ) -> Result<Folder, DomainError> {
+    ) -> Result<Folder, FolderError> {
         unimplemented!()
     }
 
@@ -96,7 +96,7 @@ impl FolderServicePort for MockFolderService {
         _user_id: Uuid,
         _page: Option<i64>,
         _page_size: Option<i64>,
-    ) -> Result<PaginatedResult<Folder>, DomainError> {
+    ) -> Result<PaginatedResult<Folder>, FolderError> {
         unimplemented!()
     }
 
@@ -105,7 +105,7 @@ impl FolderServicePort for MockFolderService {
         _user_id: Uuid,
         _id: Uuid,
         _name: Option<String>,
-    ) -> Result<Folder, DomainError> {
+    ) -> Result<Folder, FolderError> {
         unimplemented!()
     }
 
@@ -113,7 +113,7 @@ impl FolderServicePort for MockFolderService {
         &self,
         _user_id: Uuid,
         _id: Uuid,
-    ) -> Result<(), DomainError> {
+    ) -> Result<(), FolderError> {
         unimplemented!()
     }
 }
