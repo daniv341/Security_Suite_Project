@@ -19,6 +19,9 @@ pub enum DomainError {
     #[error("Error de repositorio: {0}")]
     Repository(String),
 
+    #[error("Credenciales inválidas")]
+    Unauthorized,
+
     #[error("Error al hashear la contraseña: {0}")]
     Hashing(String),
 }

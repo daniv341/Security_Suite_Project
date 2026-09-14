@@ -33,17 +33,13 @@ impl LoginService {
             .repository
             .find_by_email(email)
             .await?
-            .ok_or_else(|| {
-                DomainError::Validation("Credenciales inválidas".to_string())
-            })?;
+            .ok_or_else(|| DomainError::Unauthorized)?;
 
         let password_valid =
             UserService::verify_password(password, &user.password_hash)?;
 
         if !password_valid {
-            return Err(DomainError::Validation(
-                "Credenciales inválidas".to_string(),
-            ));
+            return Err(DomainError::Unauthorized);
         }
 
         let token = self

@@ -53,6 +53,7 @@ pub async fn get_user(
 pub async fn get_all_users(
     State(state): State<Arc<UserState>>,
     Query(pagination): Query<PaginationQuery>,
+    _auth: AuthenticatedUser,
 ) -> Result<Json<PaginatedUsersResponse>, HandlerError> {
     let result = state
         .user_service

@@ -25,6 +25,7 @@ pub fn map_domain_error(err: DomainError) -> HandlerError {
                 "Error interno del servidor".to_string(),
             )
         }
+        DomainError::Unauthorized => (StatusCode::UNAUTHORIZED, err.to_string()),
         DomainError::Hashing(msg) => {
             tracing::error!("error de hashing: {msg}");
             (
