@@ -127,9 +127,9 @@ impl UserServicePort for UserService {
         page_size: Option<i64>,
     ) -> Result<PaginatedResult<User>, DomainError> {
         let pagination = Pagination::new(page, page_size);
-        let items = self.repository.find_all(pagination).await?;
-        let total_items = self.repository.count_all().await?;
-        Ok(PaginatedResult::new(items, pagination, total_items))
+        let users = self.repository.find_all(pagination).await?;
+        let total_users = self.repository.count_all().await?;
+        Ok(PaginatedResult::new(users, pagination, total_users))
     }
 
     async fn update_user(

@@ -66,5 +66,6 @@ pub fn login_routes() -> Router<AppState> {
     
     Router::<AppState>::new()
         .route("/api/v1/users/login", post(handlers::login))
+        .route("/api/v1/users/logout", post(handlers::logout))
         .layer(trace_layer)
 }

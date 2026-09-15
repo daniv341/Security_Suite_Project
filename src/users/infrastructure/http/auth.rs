@@ -15,6 +15,8 @@ use crate::shared::state::{AppState, LoginState};
 
 pub struct AuthenticatedUser {
     pub user_id: Uuid,
+    pub jti: Uuid,
+    pub exp: usize,
 }
 
 #[async_trait]
@@ -69,8 +71,18 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
                 )
             })?;
 
+        let jti = Uuid::parse_str(&claims.jti)
+            .map_err(|_| {
+                (
+                    StatusCode::UNAUTHORIZED,
+                    "Invalid token ID",
+                )
+            })?;
+
         Ok(Self {
             user_id,
+            jti,
+            exp: claims.exp,
         })
     }
 }

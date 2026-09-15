@@ -13,4 +13,6 @@
 
 pub mod shared;
 pub mod users;
+pub mod auth;
 pub mod folders;
+pub mod logs;

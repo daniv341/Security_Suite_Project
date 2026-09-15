@@ -2,6 +2,7 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use time::{Duration, OffsetDateTime};
 
 use super::claims::Claims;
+use uuid::Uuid;
 use super::error::AuthError;
 
 pub struct JwtService {
@@ -26,6 +27,7 @@ impl JwtService {
 
         let claims = Claims {
             sub: user_id.to_string(),
+            jti: Uuid::new_v4().to_string(),
             iat: now as usize,
             exp: (now + self.expiration.whole_seconds()) as usize,
         };

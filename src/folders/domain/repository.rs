@@ -25,7 +25,7 @@ pub trait FolderRepository: Send + Sync {
     async fn count_all(&self, user_id: Uuid) -> Result<i64, DomainError>;
 
     // actualiza un folder existente por id
-    async fn update(&self, user_id: Uuid, folder: &Folder) -> Result<Folder, DomainError>; // el & es para que se pueda usar el mismo item sin moverlo
+    async fn update(&self, user_id: Uuid, folder: &Folder) -> Result<Folder, DomainError>; // el & es para que se pueda usar el mismo user sin moverlo
     // elimina un folder por id
     async fn delete(&self, user_id:Uuid, id: Uuid) -> Result<(), DomainError>;
 }

@@ -12,6 +12,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 
@@ -102,4 +103,25 @@ pub async fn login(
         access_token: token,
         token_type: "Bearer".to_string(),
     }))
+}
+
+pub async fn logout(
+    State(state): State<Arc<LoginState>>,
+    user: AuthenticatedUser,
+) -> Result<StatusCode, HandlerError> {
+    let expires_at = DateTime::from_timestamp(user.exp as i64, 0)
+        .ok_or((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Timestamp de expiración inválido".to_string(),
+            }),
+        ))?;
+
+    state
+        .logout_service
+        .revoke_token(user.jti, expires_at)
+        .await
+        .map_err(map_domain_error)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
